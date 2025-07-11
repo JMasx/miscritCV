@@ -4,17 +4,19 @@ import time
 from PIL import Image
 
 # === CONFIGURATION ===
-BUSH_IMAGE = 'bush.png'
-THUMP_IMAGE = 'mightybash.png'
+BUSH_IMAGE = 'dead_tree.png'
+THUMP_IMAGE = 'ferocity.png'
 CONTINUE_IMAGE = 'continue.png'
 CAPTURE_IMAGE = 'capture.png'
-TRAIN_FLASH_IMAGE = 'train_flash.png'
+TRAIN_FLASH_IMAGE = 'train_nonflash.png'
 TRAIN_NOW_IMAGE = 'train_now.png'
 CLOSE_IMAGE = 'close.png'
+LEVEL_UP_NOTICE_IMAGE = 'level_up_notice.png'     # Added for level up screen detection
+READY_TO_TRAIN_IMAGE = 'ready_to_train.png'       # Added for "READY TO TRAIN" bar during fight
 DEFAULT_CONFIDENCE = 0.65
 BUSH_OFFSET = (30, 30)
 CAPTURE_THRESHOLD = 86
-RARE_INITIAL_THRESHOLDS = [27] + list(range(0, 21))  # 27% or ≤ 20%
+RARE_INITIAL_THRESHOLDS = [27] + list(range(0, 21))  # Exactly 27% or ≤ 20%
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 # === IMAGE UTILITIES ===
@@ -43,7 +45,12 @@ def click_image(image_path, timeout=5, confidence=DEFAULT_CONFIDENCE, offset=(0,
         time.sleep(0.15)
         pyautogui.mouseUp()
         return True
+    else:
+        screenshot = pyautogui.screenshot()
+        screenshot.save('debug_failed_image.png')  # Save screenshot for debugging
+        print(f"❌ Failed to find {image_path}. Screenshot saved.")
     return False
+
 
 # === OCR UTILITIES ===
 
@@ -122,8 +129,9 @@ def handle_post_capture():
     time.sleep(3)
     if click_image(CONTINUE_IMAGE, timeout=8):
         print("➡️ Clicked Continue 1.")
-    time.sleep(2)
-    if click_image(CONTINUE_IMAGE, timeout=8):
+
+    time.sleep(3)
+    if click_image(CONTINUE_IMAGE, timeout=8, confidence=0.55):
         print("➡️ Clicked Continue 2.")
 
     time.sleep(3)
@@ -135,18 +143,18 @@ def handle_post_capture():
 def handle_training_mode():
     print("📚 Entering training mode...")
 
-    if click_image(TRAIN_FLASH_IMAGE, timeout=5):
+    if click_image(TRAIN_FLASH_IMAGE, timeout=5, confidence=0.8):
         print("✅ Clicked flashing Train button.")
         time.sleep(2)
 
-        if click_image(TRAIN_NOW_IMAGE, timeout=5):
+        if click_image(TRAIN_NOW_IMAGE, timeout=5, confidence=0.45):
             print("💪 Clicked Train Now.")
             time.sleep(2)
 
-            if click_image(CONTINUE_IMAGE, timeout=5):
+            if click_image(CONTINUE_IMAGE, timeout=3, confidence=0.6):
                 print("➡️ Clicked Continue 1.")
                 time.sleep(2)
-                if click_image(CONTINUE_IMAGE, timeout=5):
+                if click_image(CONTINUE_IMAGE, timeout=3, confidence=0.6):
                     print("➡️ Clicked Continue 2.")
 
             if click_image(CLOSE_IMAGE, timeout=5):
@@ -156,36 +164,44 @@ def handle_training_mode():
     else:
         print("🚫 Train button not flashing.")
 
-# === MAIN FLOW ===
+# === FIGHT SEQUENCE ===
 
 def fight_sequence():
     print("💥 Battle started! Attacking with Thump...")
+    ready_to_train_detected = False
 
     if should_enter_capture_mode():
         attempt_capture_when_ready()
         return
 
     while True:
+        # Check if Ready To Train appears during fight, set flag but don't interrupt
+        if wait_for_image(READY_TO_TRAIN_IMAGE, timeout=0.5):
+            if not ready_to_train_detected:
+                print("📈 'READY TO TRAIN' detected during fight!")
+            ready_to_train_detected = True
+
         if click_image(THUMP_IMAGE, timeout=4):
             print("➡️ Clicked Thump")
             time.sleep(3)
         else:
-            print("⚠️ Thump missing, checking for Continue or Training...")
+            print("⚠️ Thump missing, checking for Continue...")
             time.sleep(2)
 
             if click_image(CONTINUE_IMAGE, timeout=3):
                 print("🏆 Clicked Continue — fight over.")
                 time.sleep(3)
-                if wait_for_image(TRAIN_FLASH_IMAGE, timeout=4):
+                # If level up notice or ready_to_train_detected flag set, enter training
+                if wait_for_image(LEVEL_UP_NOTICE_IMAGE, timeout=2) or ready_to_train_detected:
+                    print("📈 Level up detected or ready_to_train flag set! Entering training mode...")
                     handle_training_mode()
                 return
+
+# === MAIN LOOP ===
 
 def main():
     print("🎮 Starting Miscrits auto-farm bot...")
     while True:
-        if wait_for_image(TRAIN_FLASH_IMAGE, timeout=4):
-            handle_training_mode()
-
         print("🔍 Looking for bush...")
         if click_image(BUSH_IMAGE, timeout=10, offset=BUSH_OFFSET):
             print("🌿 Clicked bush.")
