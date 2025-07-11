@@ -4,11 +4,11 @@ import time
 from PIL import Image
 
 # === CONFIGURATION ===
-BUSH_IMAGE = 'dead_tree.png'
-THUMP_IMAGE = 'ferocity.png'
+BUSH_IMAGE = 'bush.png'
+THUMP_IMAGE = 'mightybash.png'
 CONTINUE_IMAGE = 'continue.png'
 CAPTURE_IMAGE = 'capture.png'
-TRAIN_FLASH_IMAGE = 'train_nonflash.png'
+TRAIN_FLASH_IMAGE = 'train_flash.png'
 TRAIN_NOW_IMAGE = 'train_now.png'
 CLOSE_IMAGE = 'close.png'
 LEVEL_UP_NOTICE_IMAGE = 'level_up_notice.png'     # Added for level up screen detection
@@ -45,12 +45,7 @@ def click_image(image_path, timeout=5, confidence=DEFAULT_CONFIDENCE, offset=(0,
         time.sleep(0.15)
         pyautogui.mouseUp()
         return True
-    else:
-        screenshot = pyautogui.screenshot()
-        screenshot.save('debug_failed_image.png')  # Save screenshot for debugging
-        print(f"❌ Failed to find {image_path}. Screenshot saved.")
     return False
-
 
 # === OCR UTILITIES ===
 
@@ -129,9 +124,8 @@ def handle_post_capture():
     time.sleep(3)
     if click_image(CONTINUE_IMAGE, timeout=8):
         print("➡️ Clicked Continue 1.")
-
-    time.sleep(3)
-    if click_image(CONTINUE_IMAGE, timeout=8, confidence=0.55):
+    time.sleep(2)
+    if click_image(CONTINUE_IMAGE, timeout=8):
         print("➡️ Clicked Continue 2.")
 
     time.sleep(3)
@@ -143,18 +137,18 @@ def handle_post_capture():
 def handle_training_mode():
     print("📚 Entering training mode...")
 
-    if click_image(TRAIN_FLASH_IMAGE, timeout=5, confidence=0.8):
+    if click_image(TRAIN_FLASH_IMAGE, timeout=5, confidence=0.9):
         print("✅ Clicked flashing Train button.")
         time.sleep(2)
 
-        if click_image(TRAIN_NOW_IMAGE, timeout=5, confidence=0.45):
+        if click_image(TRAIN_NOW_IMAGE, timeout=5):
             print("💪 Clicked Train Now.")
             time.sleep(2)
 
-            if click_image(CONTINUE_IMAGE, timeout=3, confidence=0.6):
+            if click_image(CONTINUE_IMAGE, timeout=3):
                 print("➡️ Clicked Continue 1.")
                 time.sleep(2)
-                if click_image(CONTINUE_IMAGE, timeout=3, confidence=0.6):
+                if click_image(CONTINUE_IMAGE, timeout=3):
                     print("➡️ Clicked Continue 2.")
 
             if click_image(CLOSE_IMAGE, timeout=5):
