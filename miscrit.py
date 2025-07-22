@@ -3,9 +3,8 @@ import pytesseract
 import time
 from PIL import Image, ImageFilter
 
-
 # === CONFIGURATION ===
-BUSH_IMAGE = 'octav.png'
+BUSH_IMAGE = 'f_croak.png'
 THUMP_IMAGE = 'thump2.png'
 CONTINUE_IMAGE = 'continue.png'
 CAPTURE_IMAGE = 'capture.png'
@@ -22,6 +21,7 @@ pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tessera
 
 # === CONFIGURATION FOR MISCRIT NAME OCR ===
 CAPTURE_NAME_REGION = (1700, 60, 100, 35)  # Region to capture the Miscrit's name (top-right section)
+
 # === IMAGE UTILITIES ===
 
 def wait_for_image(image_path, timeout=15, confidence=DEFAULT_CONFIDENCE, check_interval=0.5):
@@ -111,9 +111,20 @@ def read_miscrit_name(region):
     text = pytesseract.image_to_string(enhanced, config=config)
 
     # Debugging: Print the OCR result
-    print(f"OCR Result (Miscrit Name): {text.strip()}")
+    # print(f"OCR Result (Miscrit Name): {text.strip()}")  # Not displaying the name in the console
 
     return text.strip()
+
+# === LOGGING FUNCTION ===
+
+def log_capture_event(miscrit_name, capture_percent):
+    utc = time.gmtime()  # Get the current UTC time
+    mountain = time.localtime(time.mktime(utc) - 7*3600)
+        
+    # Open the log file in append mode
+    with open('capture_log.txt', 'a') as log_file:
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S", mountain)  # Format the time in local time
+        log_file.write(f"{timestamp} - Miscrit: {miscrit_name}, Capture Chance: {capture_percent}%\n")
 
 # === CAPTURE MODE ===
 
@@ -127,7 +138,8 @@ def should_enter_capture_mode():
         if percent in RARE_INITIAL_THRESHOLDS:
             miscrit_name = read_miscrit_name(CAPTURE_NAME_REGION)
             if miscrit_name:
-                print(f"🎯 Capture mode triggered by Miscrit: {miscrit_name}")
+                log_capture_event(miscrit_name, percent)  # Log the capture event to the file
+                # print(f"🎯 Capture mode triggered by Miscrit: {miscrit_name}")  # No longer printing to console
             else:
                 print("⚠️ Failed to read Miscrit name.")
             return True
