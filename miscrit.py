@@ -1,7 +1,8 @@
 import pyautogui
 import pytesseract
 import time
-from PIL import Image
+from PIL import Image, ImageFilter
+
 
 # === CONFIGURATION ===
 BUSH_IMAGE = 'octav.png'
@@ -49,24 +50,49 @@ def click_image(image_path, timeout=5, confidence=DEFAULT_CONFIDENCE, offset=(0,
 
 # === OCR UTILITIES ===
 
-def read_capture_percent(capture_box, offset_y=8, height=30, width_reduction=25):
+def read_capture_percent(capture_box, offset_y=8, height=30, width_reduction=100):
     x, y, w, h = capture_box
-    capture_x = int(x)
+    capture_x = int(x) + 45
     capture_y = int(y + h + offset_y)
     capture_w = int(w - width_reduction)
     capture_h = int(height)
 
     time.sleep(0.8)
     screenshot = pyautogui.screenshot(region=(capture_x, capture_y, capture_w, capture_h))
-    screenshot.save('debug_capture_percent.png')
+    screenshot.save('debug_capture_percent.png')  # Debugging step: save the image
 
-    gray = screenshot.convert('L').point(lambda px: 0 if px < 140 else 255)
-    text = pytesseract.image_to_string(gray, config='--psm 7 -c tessedit_char_whitelist=0123456789%')
+    # Preprocessing: Apply adaptive thresholding or sharpen the image to improve OCR accuracy
+    gray = screenshot.convert('L')  # Convert to grayscale
 
-    try:
-        return int(text.strip().replace('%', '').replace(' ', ''))
-    except ValueError:
+    # Apply a median filter to reduce noise, and sharpen the image to make text clearer
+    filtered = gray.filter(ImageFilter.MedianFilter(3))
+    sharpened = filtered.filter(ImageFilter.UnsharpMask(radius=2, percent=150, threshold=3))
+
+    # Adaptive thresholding (optional but can improve OCR in some cases)
+    enhanced = sharpened.point(lambda px: 255 if px > 120 else 0)
+
+    # Use pytesseract to extract the text
+    config = '--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789%'  # Tesseract config to handle percentages
+    text = pytesseract.image_to_string(enhanced, config=config)
+
+    # Debugging: Show the OCR result for inspection
+    print(f"OCR Result: {text.strip()}")  # Print the result
+
+    # Clean up OCR result
+    text = text.strip().replace('%', '').replace(' ', '')
+
+    # Check if the value is reasonable (between 0 and 100)
+    if text.isdigit():
+        capture_percent = int(text)
+        if 0 <= capture_percent <= 100:
+            return capture_percent
+        else:
+            print(f"⚠️ Invalid capture percentage detected: {capture_percent}%")
+            return None
+    else:
+        print(f"⚠️ Failed to parse capture percent: {text}")
         return None
+
 
 # === CAPTURE MODE ===
 
