@@ -15,11 +15,13 @@ CLOSE_IMAGE = 'close.png'
 LEVEL_UP_NOTICE_IMAGE = 'level_up_notice.png'     # Added for level up screen detection
 READY_TO_TRAIN_IMAGE = 'ready_to_train.png'       # Added for "READY TO TRAIN" bar during fight
 DEFAULT_CONFIDENCE = 0.65
-BUSH_OFFSET = (0, 0)#(30, 30)
+BUSH_OFFSET = (0, 0)  # (30, 30)
 CAPTURE_THRESHOLD = 79
-RARE_INITIAL_THRESHOLDS = [27, 28] + list(range(0, 24))  # Exactly 27% or ≤ 20%
+RARE_INITIAL_THRESHOLDS = [27, 28] + list(range(0, 26))  # Exactly 27% or ≤ 20%
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
+# === CONFIGURATION FOR MISCRIT NAME OCR ===
+CAPTURE_NAME_REGION = (1700, 60, 100, 35)  # Region to capture the Miscrit's name (top-right section)
 # === IMAGE UTILITIES ===
 
 def wait_for_image(image_path, timeout=15, confidence=DEFAULT_CONFIDENCE, check_interval=0.5):
@@ -93,6 +95,25 @@ def read_capture_percent(capture_box, offset_y=8, height=30, width_reduction=100
         print(f"⚠️ Failed to parse capture percent: {text}")
         return None
 
+def read_miscrit_name(region):
+    # Capture the image of the top-right section where the Miscrit's name is located
+    screenshot = pyautogui.screenshot(region=region)
+    screenshot.save('debug_miscrit_name.png')  # Save for debugging
+
+    # Convert to grayscale
+    gray = screenshot.convert('L')
+
+    # Apply thresholding to improve OCR
+    enhanced = gray.point(lambda px: 255 if px > 120 else 0)
+
+    # Use pytesseract to extract the text (name of the Miscrit)
+    config = '--psm 6 --oem 3 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+    text = pytesseract.image_to_string(enhanced, config=config)
+
+    # Debugging: Print the OCR result
+    print(f"OCR Result (Miscrit Name): {text.strip()}")
+
+    return text.strip()
 
 # === CAPTURE MODE ===
 
@@ -103,7 +124,13 @@ def should_enter_capture_mode():
     percent = read_capture_percent(box)
     if percent is not None:
         print(f"🔎 Initial capture chance: {percent}%")
-        return percent in RARE_INITIAL_THRESHOLDS
+        if percent in RARE_INITIAL_THRESHOLDS:
+            miscrit_name = read_miscrit_name(CAPTURE_NAME_REGION)
+            if miscrit_name:
+                print(f"🎯 Capture mode triggered by Miscrit: {miscrit_name}")
+            else:
+                print("⚠️ Failed to read Miscrit name.")
+            return True
     print("⚠️ Failed to read initial capture percentage.")
     return False
 
