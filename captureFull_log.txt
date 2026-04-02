@@ -1482,3 +1482,32 @@
 
 2026-04-02 08:55:36 - Miscrit: Sparkitter, Capture Chance: 36%
 2026-04-02 08:56:24 - Miscrit: Wavesiing, Capture Chance: 33%
+2026-04-02 09:09:45 - Hippoke (304%)
+2026-04-02 09:10:34 - Arigsto (33%)
+2026-04-02 09:13:09 - Echino (344%)
+2026-04-02 09:13:38 - Sparkitter (364%)
+2026-04-02 09:14:35 - Arigsto (40%)
+2026-04-02 09:25:55 - Sparkitter (424%)
+2026-04-02 09:27:18 - Wavesiing (304%)
+2026-04-02 09:28:12 - Wavesiing (394%)
+2026-04-02 09:29:06 - Sparkitter (364%)
+2026-04-02 09:29:59 - Echino (344%)
+2026-04-02 09:30:35 - Wavesiing (374%)
+2026-04-02 09:31:02 - Hippoke (31%)
+2026-04-02 09:36:05 - Miscrit: Hippoke, Capture Chance: 36%
+2026-04-02 09:36:42 - Miscrit: Hippoke, Capture Chance: 39%
+2026-04-02 09:39:05 - Miscrit: Sparkitter, Capture Chance: 34%
+2026-04-02 09:41:07 - Miscrit: Hippoke, Capture Chance: 42%
+2026-04-02 09:41:42 - Miscrit: Hippoke, Capture Chance: 34%
+2026-04-02 09:42:37 - Miscrit: Arigsto, Capture Chance: 34%
+2026-04-02 09:44:27 - Miscrit: Echino, Capture Chance: 37%
+2026-04-02 09:45:24 - Miscrit: Arigsto, Capture Chance: 34%
+2026-04-02 09:47:08 - Miscrit: Hippoke, Capture Chance: 30%
+2026-04-02 09:54:57 - Miscrit: Sparkitter, Capture Chance: 37%
+2026-04-02 09:56:05 - Miscrit: Sparkitter, Capture Chance: 39%
+2026-04-02 09:56:43 - Miscrit: Hippoke, Capture Chance: 33%
+2026-04-02 09:57:34 - Miscrit: Hippoke, Capture Chance: 39%
+2026-04-02 09:57:55 - Miscrit: Sparkitter, Capture Chance: 34%
+2026-04-02 09:58:40 - Miscrit: Pamboo, Capture Chance: 23%
+2026-04-02 10:00:17 - Miscrit: Wavesiing, Capture Chance: 34%
+2026-04-02 10:06:17 - Miscrit: Echino, Capture Chance: 34%

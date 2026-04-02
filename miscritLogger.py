@@ -14,23 +14,22 @@ CLOSE_IMAGE = 'close.png'
 LEVEL_UP_NOTICE_IMAGE = 'level_up_notice.png'
 READY_TO_TRAIN_IMAGE = 'ready_to_train.png'
 
-# NEW (only additions)
 ARROW_RIGHT_IMAGE = 'arrow_right.png'
 POISON_IMAGE = 'poison.png'
 
 DEFAULT_CONFIDENCE = 0.65
 BUSH_OFFSET = (0, 0)  
-CAPTURE_THRESHOLD = 90  # safer for legendary
 
-# CHANGED: tighter legendary detection
-RARE_INITIAL_THRESHOLDS = list(range(0, 60))  # 0–5%
+CAPTURE_THRESHOLD = 91          # When to attempt capture
+POISON_START_THRESHOLD = 70     # When to switch from Thump to Poison
+RARE_INITIAL_THRESHOLDS = list(range(0, 8))  # Rare chance to trigger capture mode
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
+# Region for OCRing the Miscrit's name
 CAPTURE_NAME_REGION = (1700, 60, 100, 35)
 
 # === IMAGE UTILITIES ===
-
 def wait_for_image(image_path, timeout=15, confidence=DEFAULT_CONFIDENCE, check_interval=0.5):
     start_time = time.time()
     while time.time() - start_time < timeout:
@@ -58,7 +57,7 @@ def click_image(image_path, timeout=5, confidence=DEFAULT_CONFIDENCE, offset=(0,
     return False
 
 # === OCR UTILITIES ===
-
+# ✅ Capture percent reader restored to your original high accuracy pipeline
 def read_capture_percent(capture_box, offset_y=8, height=30, width_reduction=100):
     x, y, w, h = capture_box
     capture_x = int(x) + 45
@@ -68,6 +67,7 @@ def read_capture_percent(capture_box, offset_y=8, height=30, width_reduction=100
 
     time.sleep(0.8)
     screenshot = pyautogui.screenshot(region=(capture_x, capture_y, capture_w, capture_h))
+    screenshot.save('debug_capture_percent.png')
 
     gray = screenshot.convert('L')
     filtered = gray.filter(ImageFilter.MedianFilter(3))
@@ -86,6 +86,7 @@ def read_capture_percent(capture_box, offset_y=8, height=30, width_reduction=100
 
 def read_miscrit_name(region):
     screenshot = pyautogui.screenshot(region=region)
+    screenshot.save('debug_miscrit_name.png')
 
     gray = screenshot.convert('L')
     enhanced = gray.point(lambda px: 255 if px > 120 else 0)
@@ -95,7 +96,6 @@ def read_miscrit_name(region):
     return text.strip()
 
 # === LOGGING ===
-
 def log_miscrit_encounter(miscrit_name, capture_percent):
     utc = time.gmtime()
     mountain = time.localtime(time.mktime(utc) - 7*3600)
@@ -103,28 +103,15 @@ def log_miscrit_encounter(miscrit_name, capture_percent):
     with open('captureFull_log.txt', 'a') as log_file:
         log_file.write(f"{timestamp} - Miscrit: {miscrit_name}, Capture Chance: {capture_percent}%\n")
 
-# === NEW: POISON ATTACK (2x RIGHT ARROW) ===
-
+# === ATTACK UTILITIES ===
 def use_poison_attack():
-    # move to page 2
-    if not click_image(ARROW_RIGHT_IMAGE, timeout=3):
-        return False
+    click_image(ARROW_RIGHT_IMAGE, timeout=3)
     time.sleep(0.5)
-
-    # move to page 3
-    if not click_image(ARROW_RIGHT_IMAGE, timeout=3):
-        return False
+    click_image(ARROW_RIGHT_IMAGE, timeout=3)
     time.sleep(0.5)
-
-    # use poison
-    if click_image(POISON_IMAGE, timeout=3):
-        time.sleep(3)
-        return True
-
-    return False
+    return click_image(POISON_IMAGE, timeout=3)
 
 # === CAPTURE MODE ===
-
 def should_enter_capture_mode():
     box = wait_for_image(CAPTURE_IMAGE, timeout=3)
     if not box:
@@ -133,49 +120,56 @@ def should_enter_capture_mode():
     percent = read_capture_percent(box)
     if percent is not None:
         miscrit_name = read_miscrit_name(CAPTURE_NAME_REGION)
-
         if miscrit_name:
             log_miscrit_encounter(miscrit_name, percent)
             print(f"👁️ Seen Miscrit: {miscrit_name} ({percent}%)")
-
         if percent in RARE_INITIAL_THRESHOLDS:
-            print("🎯 Legendary detected → capture mode")
+            print("🎯 Rare threshold met! Entering capture mode.")
             return True
-
     return False
 
 def attempt_capture_when_ready():
-    print("🎯 In capture mode. Using poison strategy...")
+    print("🎯 Capture mode active")
 
     while True:
-        box = wait_for_image(CAPTURE_IMAGE, timeout=3)
+        # Wait for capture button at start of turn
+        box = wait_for_image(CAPTURE_IMAGE, timeout=5)
         if not box:
             print("❌ Capture button not found.")
             return
 
         percent = read_capture_percent(box)
+        if percent is None:
+            print("⚠️ Couldn't read capture %, defaulting to 0")
+            percent = 0
 
-        if percent is not None:
-            print(f"📈 Current capture chance: {percent}%")
+        print(f"📈 Current capture chance: {percent}%")
 
-            if percent >= CAPTURE_THRESHOLD:
-                print("🎯 Threshold met! Attempting capture...")
-                center = pyautogui.center(box)
-                pyautogui.moveTo(center.x, center.y, duration=0.7)
-                time.sleep(0.8)
-                pyautogui.mouseDown()
-                time.sleep(0.15)
-                pyautogui.mouseUp()
-                handle_post_capture()
-                return
-
-        # ONLY CHANGE: use poison instead of thump
-        if not use_poison_attack():
-            print("⚠️ Failed to use poison.")
+        # Attempt capture if threshold reached
+        if percent >= CAPTURE_THRESHOLD:
+            print("🎯 Threshold met! Attempting capture...")
+            center = pyautogui.center(box)
+            pyautogui.moveTo(center.x, center.y, duration=0.7)
+            time.sleep(0.8)
+            pyautogui.mouseDown()
+            time.sleep(0.15)
+            pyautogui.mouseUp()
+            handle_post_capture()
             return
 
-# === POST-CAPTURE ===
+        # Decide attack type
+        if percent < POISON_START_THRESHOLD:
+            if not click_image(THUMP_IMAGE, timeout=4):
+                print("⚠️ Failed to click Thump")
+                return
+        else:
+            if not use_poison_attack():
+                print("⚠️ Failed to click Poison")
+                return
 
+        time.sleep(3)
+
+# === POST-CAPTURE ===
 def handle_post_capture():
     click_image("okay.png", timeout=8)
     time.sleep(3)
@@ -186,7 +180,6 @@ def handle_post_capture():
     click_image("keep.png", timeout=8)
 
 # === TRAINING MODE ===
-
 def handle_training_mode():
     if click_image(TRAIN_FLASH_IMAGE, timeout=5, confidence=0.5):
         click_image(TRAIN_NOW_IMAGE, timeout=5, confidence=0.45)
@@ -196,7 +189,6 @@ def handle_training_mode():
         click_image(CLOSE_IMAGE, timeout=5)
 
 # === FIGHT SEQUENCE ===
-
 def fight_sequence():
     ready_to_train_detected = False
 
@@ -219,7 +211,6 @@ def fight_sequence():
             time.sleep(2)
 
 # === MAIN LOOP ===
-
 def main():
     print("🎮 Starting Miscrits auto-farm logger...")
     while True:
