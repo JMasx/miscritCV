@@ -20,8 +20,8 @@ POISON_IMAGE = 'poison.png'
 DEFAULT_CONFIDENCE = 0.65
 BUSH_OFFSET = (0, 0)  
 
-CAPTURE_THRESHOLD = 91          # When to attempt capture
-POISON_START_THRESHOLD = 70     # When to switch from Thump to Poison
+CAPTURE_THRESHOLD = 82          # When to attempt capture
+POISON_START_THRESHOLD = 60     # When to switch from Thump to Poison
 RARE_INITIAL_THRESHOLDS = list(range(0, 8))  # Rare chance to trigger capture mode
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -57,7 +57,7 @@ def click_image(image_path, timeout=5, confidence=DEFAULT_CONFIDENCE, offset=(0,
     return False
 
 # === OCR UTILITIES ===
-# ✅ Capture percent reader restored to your original high accuracy pipeline
+# Capture percent reader using high-accuracy pipeline
 def read_capture_percent(capture_box, offset_y=8, height=30, width_reduction=100):
     x, y, w, h = capture_box
     capture_x = int(x) + 45
@@ -169,15 +169,25 @@ def attempt_capture_when_ready():
 
         time.sleep(3)
 
-# === POST-CAPTURE ===
+# === POST-CAPTURE / POST-BATTLE ===
 def handle_post_capture():
-    click_image("okay.png", timeout=8)
-    time.sleep(3)
-    click_image(CONTINUE_IMAGE, timeout=8)
+    # Attempt to click "okay" if it exists
+    click_image("okay.png", timeout=5)
     time.sleep(2)
-    click_image(CONTINUE_IMAGE, timeout=8)
-    time.sleep(3)
-    click_image("keep.png", timeout=8)
+
+    # Attempt to click "keep" if capture succeeded
+    if click_image("keep.png", timeout=5):
+        print("🎉 Capture successful, kept Miscrit!")
+        time.sleep(2)
+    else:
+        print("❌ Capture failed or keep button not found.")
+
+    # Now proceed through normal post-battle continues
+    for _ in range(3):
+        if click_image(CONTINUE_IMAGE, timeout=5):
+            time.sleep(2)
+        else:
+            break  # exit early if continue not found
 
 # === TRAINING MODE ===
 def handle_training_mode():
