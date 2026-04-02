@@ -13,14 +13,20 @@ TRAIN_NOW_IMAGE = 'train_now.png'
 CLOSE_IMAGE = 'close.png'
 LEVEL_UP_NOTICE_IMAGE = 'level_up_notice.png'
 READY_TO_TRAIN_IMAGE = 'ready_to_train.png'
+
+# NEW (only additions)
+ARROW_RIGHT_IMAGE = 'arrow_right.png'
+POISON_IMAGE = 'poison.png'
+
 DEFAULT_CONFIDENCE = 0.65
 BUSH_OFFSET = (0, 0)  
-CAPTURE_THRESHOLD = 71
-RARE_INITIAL_THRESHOLDS = list(range(-1, 18))  # Rare capture chance
+CAPTURE_THRESHOLD = 90  # safer for legendary
+
+# CHANGED: tighter legendary detection
+RARE_INITIAL_THRESHOLDS = list(range(0, 60))  # 0–5%
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-# Region for OCRing the Miscrit's name
 CAPTURE_NAME_REGION = (1700, 60, 100, 35)
 
 # === IMAGE UTILITIES ===
@@ -62,7 +68,6 @@ def read_capture_percent(capture_box, offset_y=8, height=30, width_reduction=100
 
     time.sleep(0.8)
     screenshot = pyautogui.screenshot(region=(capture_x, capture_y, capture_w, capture_h))
-    screenshot.save('debug_capture_percent.png')
 
     gray = screenshot.convert('L')
     filtered = gray.filter(ImageFilter.MedianFilter(3))
@@ -81,7 +86,6 @@ def read_capture_percent(capture_box, offset_y=8, height=30, width_reduction=100
 
 def read_miscrit_name(region):
     screenshot = pyautogui.screenshot(region=region)
-    screenshot.save('debug_miscrit_name.png')
 
     gray = screenshot.convert('L')
     enhanced = gray.point(lambda px: 255 if px > 120 else 0)
@@ -99,6 +103,26 @@ def log_miscrit_encounter(miscrit_name, capture_percent):
     with open('captureFull_log.txt', 'a') as log_file:
         log_file.write(f"{timestamp} - Miscrit: {miscrit_name}, Capture Chance: {capture_percent}%\n")
 
+# === NEW: POISON ATTACK (2x RIGHT ARROW) ===
+
+def use_poison_attack():
+    # move to page 2
+    if not click_image(ARROW_RIGHT_IMAGE, timeout=3):
+        return False
+    time.sleep(0.5)
+
+    # move to page 3
+    if not click_image(ARROW_RIGHT_IMAGE, timeout=3):
+        return False
+    time.sleep(0.5)
+
+    # use poison
+    if click_image(POISON_IMAGE, timeout=3):
+        time.sleep(3)
+        return True
+
+    return False
+
 # === CAPTURE MODE ===
 
 def should_enter_capture_mode():
@@ -109,28 +133,31 @@ def should_enter_capture_mode():
     percent = read_capture_percent(box)
     if percent is not None:
         miscrit_name = read_miscrit_name(CAPTURE_NAME_REGION)
+
         if miscrit_name:
             log_miscrit_encounter(miscrit_name, percent)
             print(f"👁️ Seen Miscrit: {miscrit_name} ({percent}%)")
-        else:
-            print("⚠️ Failed to read Miscrit name.")
-        
+
         if percent in RARE_INITIAL_THRESHOLDS:
-            print("🎯 Rare threshold met! Entering capture mode.")
+            print("🎯 Legendary detected → capture mode")
             return True
-        return False
+
     return False
 
 def attempt_capture_when_ready():
-    print("🎯 In capture mode. Weakening Miscrit...")
+    print("🎯 In capture mode. Using poison strategy...")
+
     while True:
         box = wait_for_image(CAPTURE_IMAGE, timeout=3)
         if not box:
             print("❌ Capture button not found.")
             return
+
         percent = read_capture_percent(box)
+
         if percent is not None:
             print(f"📈 Current capture chance: {percent}%")
+
             if percent >= CAPTURE_THRESHOLD:
                 print("🎯 Threshold met! Attempting capture...")
                 center = pyautogui.center(box)
@@ -141,15 +168,11 @@ def attempt_capture_when_ready():
                 pyautogui.mouseUp()
                 handle_post_capture()
                 return
-            else:
-                print("❌ Capture chance below threshold, attacking again...")
-        else:
-            print("❓ Couldn't read capture %, attacking anyway...")
 
-        if not click_image(THUMP_IMAGE, timeout=4):
-            print("⚠️ Failed to click Thump.")
+        # ONLY CHANGE: use poison instead of thump
+        if not use_poison_attack():
+            print("⚠️ Failed to use poison.")
             return
-        time.sleep(3)
 
 # === POST-CAPTURE ===
 
