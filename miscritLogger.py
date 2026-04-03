@@ -4,7 +4,7 @@ import time
 from PIL import Image, ImageFilter
 
 # === CONFIGURATION ===
-BUSH_IMAGE = 'aquarion.png'
+BUSH_IMAGE = 'woolly.png'
 THUMP_IMAGE = 'fprimo.png'
 CONTINUE_IMAGE = 'continue.png'
 CAPTURE_IMAGE = 'capture.png'
@@ -20,8 +20,8 @@ POISON_IMAGE = 'poison.png'
 DEFAULT_CONFIDENCE = 0.65
 BUSH_OFFSET = (0, 0)  
 
-CAPTURE_THRESHOLD = 82          # When to attempt capture
-POISON_START_THRESHOLD = 60     # When to switch from Thump to Poison
+CAPTURE_THRESHOLD = 74          # When to attempt capture
+POISON_START_THRESHOLD = 40     # When to switch from Thump to Poison
 RARE_INITIAL_THRESHOLDS = list(range(0, 8))  # Rare chance to trigger capture mode
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
